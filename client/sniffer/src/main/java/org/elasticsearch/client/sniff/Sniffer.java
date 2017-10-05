@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -48,8 +49,9 @@ public class Sniffer implements Closeable {
 
     private final Task task;
 
-    Sniffer(RestClient restClient, HostsSniffer hostsSniffer, long sniffInterval, long sniffAfterFailureDelay) {
-        this.task = new Task(hostsSniffer, restClient, sniffInterval, sniffAfterFailureDelay);
+    Sniffer(RestClient restClient, HostsSniffer hostsSniffer, long sniffInterval, long sniffAfterFailureDelay,
+		    ThreadFactory threadFactory) {
+	    this.task = new Task(hostsSniffer, restClient, sniffInterval, sniffAfterFailureDelay, threadFactory);
     }
 
     /**
@@ -74,12 +76,17 @@ public class Sniffer implements Closeable {
         private final AtomicBoolean running = new AtomicBoolean(false);
         private ScheduledFuture<?> scheduledFuture;
 
-        private Task(HostsSniffer hostsSniffer, RestClient restClient, long sniffIntervalMillis, long sniffAfterFailureDelayMillis) {
-            this.hostsSniffer = hostsSniffer;
-            this.restClient = restClient;
+        private Task(HostsSniffer hostsSniffer, RestClient restClient, long sniffIntervalMillis, long sniffAfterFailureDelayMillis,
+		        ThreadFactory threadFactory) {
+	        this.hostsSniffer = hostsSniffer;
+	        this.restClient = restClient;
             this.sniffIntervalMillis = sniffIntervalMillis;
             this.sniffAfterFailureDelayMillis = sniffAfterFailureDelayMillis;
-            this.scheduledExecutorService = Executors.newScheduledThreadPool(1);
+            if (threadFactory != null) {
+	            this.scheduledExecutorService = Executors.newScheduledThreadPool(1, threadFactory);
+            } else {
+	            this.scheduledExecutorService = Executors.newScheduledThreadPool(1);
+            }
             scheduleNextRun(0);
         }
 

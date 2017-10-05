@@ -22,6 +22,7 @@ package org.elasticsearch.client.sniff;
 import org.elasticsearch.client.RestClient;
 
 import java.util.Objects;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -35,6 +36,7 @@ public final class SnifferBuilder {
     private long sniffIntervalMillis = DEFAULT_SNIFF_INTERVAL;
     private long sniffAfterFailureDelayMillis = DEFAULT_SNIFF_AFTER_FAILURE_DELAY;
     private HostsSniffer hostsSniffer;
+    private ThreadFactory threadFactory = null;
 
     /**
      * Creates a new builder instance by providing the {@link RestClient} that will be used to communicate with elasticsearch
@@ -80,12 +82,21 @@ public final class SnifferBuilder {
     }
 
     /**
+     * Set the {@link ThreadFactory} to be used by the sniffer's scheduled executor
+     */
+    public SnifferBuilder setThreadFactory(ThreadFactory threadFactory) {
+        Objects.requireNonNull(threadFactory, "threadFactory cannot be null");
+        this.threadFactory = threadFactory;
+        return this;
+    }
+
+    /**
      * Creates the {@link Sniffer} based on the provided configuration.
      */
     public Sniffer build() {
         if (hostsSniffer == null) {
             this.hostsSniffer = new ElasticsearchHostsSniffer(restClient);
         }
-        return new Sniffer(restClient, hostsSniffer, sniffIntervalMillis, sniffAfterFailureDelayMillis);
+        return new Sniffer(restClient, hostsSniffer, sniffIntervalMillis, sniffAfterFailureDelayMillis, threadFactory);
     }
 }
